@@ -156,9 +156,9 @@ def install_stacktach():
     execute("apt-get install python-pip python-virtualenv libmysqlclient-dev python2.7-dev -y", True)
     execute("rm -rf /root/stacktach", True)
     execute("git clone https://github.com/rackerlabs/stacktach /root/stacktach", True)
-    execute("virtualenv /root/stacktach/venv", True)
-    execute(". /root/stacktach/venv/bin/activate && pip install --upgrade distribute", True)
-    execute(". /root/stacktach/venv/bin/activate && pip install -r /root/stacktach/etc/pip-requires.txt south", True)
+    execute("virtualenv /root/stacktach-venv", True)
+    execute(". /root/stacktach-venv/bin/activate && pip install --upgrade distribute", True)
+    execute(". /root/stacktach-venv/bin/activate && pip install -r /root/stacktach/etc/pip-requires.txt south", True)
     execute("mkdir -p /var/log/stacktach/")
 
     execute_db_commnads("DROP DATABASE IF EXISTS stacktach;")
@@ -169,7 +169,7 @@ def install_stacktach():
     # Write out the StackTach config file
     stacktach_config = "/root/stacktach/etc/stacktach_config.sh"
     delete_file(stacktach_config)
-    write_to_file(stacktach_config, ". /root/stacktach/venv/bin/activate\n")
+    write_to_file(stacktach_config, ". /root/stacktach-venv/bin/activate\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_NAME=stacktach\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_HOST=localhost\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_USERNAME=stacktach\n")
