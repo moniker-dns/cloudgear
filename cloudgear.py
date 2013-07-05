@@ -149,6 +149,41 @@ def install_database():
         print " Mysql Password already set as : %s " % mysql_password
 
 
+def install_stacktach():
+    execute("apt-get install python-pip python-virtualenv libmysqlclient-dev python2.7-dev -y", True)
+    execute("git clone https://github.com/rackerlabs/stacktach /root/stacktach", True)
+    execute("virtualenv /root/stacktach/venv", True)
+    execute(". /root/stacktach/venv && pip install --upgrade distribute", True)
+    execute(". /root/stacktach/venv && pip install -r /root/stacktach/etc/pip-requires.txt", True)
+
+    execute_db_commnads("DROP DATABASE IF EXISTS stacktach;")
+    execute_db_commnads("CREATE DATABASE stacktach;")
+    execute_db_commnads("GRANT ALL PRIVILEGES ON stacktach.* TO 'stacktach'@'%' IDENTIFIED BY 'stacktach';")
+    execute_db_commnads("GRANT ALL PRIVILEGES ON stacktach.* TO 'stacktach'@'localhost' IDENTIFIED BY 'stacktach';")
+    
+    # Write out the StackTach config file
+    stacktach_config = "/root/stacktach/etc/stacktach_config.sh"
+    delete_file(stacktach_config)
+    write_to_file(stacktach_config, "export STACKTACH_DB_NAME=stacktach\n")
+    write_to_file(stacktach_config, "export STACKTACH_DB_HOST=localhost\n")
+    write_to_file(stacktach_config, "export STACKTACH_DB_USERNAME=stacktach\n")
+    write_to_file(stacktach_config, "export STACKTACH_DB_PASSWORD=stacktach\n")
+    write_to_file(stacktach_config, "export STACKTACH_DB_PORT=3306\n")
+    write_to_file(stacktach_config, "export STACKTACH_INSTALL_DIR=/root/stacktach/\n")
+    write_to_file(stacktach_config, "export STACKTACH_DEPLOYMENTS_FILE=/root/stacktach/stacktach_worker_config.json\n")
+    write_to_file(stacktach_config, "export STACKTACH_VERIFIER_CONFIG=/root/stacktach/stacktach_verifier_config.json\n")
+    write_to_file(stacktach_config, "export DJANGO_SETTINGS_MODULE=settings\n")
+
+    worker_config = "/root/stacktach/etc/stacktach_worker_config.json"
+    delete_file(worker_config)
+    write_to_file(worker_config, '{"deployments": [{"name": "virtualbox", "durable_queue": false, "rabbit_host": "127.0.0.1", "rabbit_port": 5672, "rabbit_userid": "guest", "rabbit_password": "guest", "rabbit_virtual_host": "/"}]}')
+    
+    verifier_config = "/root/stacktach/etc/stacktach_verifier_config.json"
+    delete_file(verifier_config)
+    write_to_file(verifier_config, '{"tick_time": 30, "settle_time": 5, "settle_units": "minutes", "pool_size": 2, "enable_notifications": true, "rabbit": {"durable_queue": false, "host": "127.0.0.1", "port": 5672, "userid": "guest", "password": "guest", "virtual_host": "/", "exchange_name": "stacktach", "routing_keys": ["notifications.info"]}}')
+    
+    time.sleep(2)
+
 
 def _create_keystone_users():
     os.environ['SERVICE_TOKEN'] = 'ADMINTOKEN'
@@ -403,6 +438,7 @@ def install_and_configure_dashboard():
 initialize_system()
 install_rabbitmq()
 install_database()
+install_stacktach()
 install_and_configure_keystone()
 install_and_configure_glance()
 install_and_configure_nova()
