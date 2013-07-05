@@ -150,12 +150,16 @@ def install_database():
 
 
 def install_stacktach():
+    execute("stop stacktach-web || true", True)
+    execute("stop stacktach-worker || true", True)
+    
+
     execute("apt-get install python-pip libmysqlclient-dev python2.7-dev -y", True)
     execute("rm -rf /root/stacktach", True)
     execute("git clone https://github.com/rackerlabs/stacktach /root/stacktach", True)
     execute("pip install --upgrade distribute", True)
     execute("pip install -r /root/stacktach/etc/pip-requires.txt south", True)
-    execute("mkdir /var/log/stacktach/")
+    execute("mkdir -p /var/log/stacktach/")
 
     execute_db_commnads("DROP DATABASE IF EXISTS stacktach;")
     execute_db_commnads("CREATE DATABASE stacktach;")
@@ -183,8 +187,8 @@ def install_stacktach():
     delete_file(verifier_config)
     write_to_file(verifier_config, '{"tick_time": 30, "settle_time": 5, "settle_units": "minutes", "pool_size": 2, "enable_notifications": true, "rabbit": {"durable_queue": false, "host": "127.0.0.1", "port": 5672, "userid": "guest", "password": "guest", "virtual_host": "/", "exchange_name": "stacktach", "routing_keys": ["notifications.info"]}}')
     
-    execute(". etc/stacktach_config.sh && python manage.py syncdb --noinput", True)
-    execute(". etc/stacktach_config.sh && python manage.py migrate --noinput", True)
+    execute(". /root/stacktach/etc/stacktach_config.sh && python manage.py syncdb --noinput", True)
+    execute(". /root/stacktach/etc/stacktach_config.sh && python manage.py migrate --noinput", True)
    
     execute("cp stacktach-web.conf /etc/init/", True)
     execute("cp stacktach-worker.conf /etc/init/", True)
@@ -370,6 +374,9 @@ def install_and_configure_nova():
     add_to_conf(nova_conf, "DEFAULT", "quantum_auth_strategy", "keystone")
     add_to_conf(nova_conf, "DEFAULT", "quantum_url", "http://127.0.0.1:9696/")
     add_to_conf(nova_conf, "DEFAULT", "linuxnet_interface_driver", "nova.network.linux_net.QuantumLinuxBridgeInterfaceDriver")
+    add_to_conf(nova_conf, "DEFAULT", "notification_driver", "nova.openstack.common.notifier.rpc_notifier")
+    add_to_conf(nova_conf, "DEFAULT", "notification_topics", "monitor")
+
 
 
     add_to_conf(nova_compute_conf, "DEFAULT", "libvirt_type", "qemu")
@@ -446,12 +453,12 @@ def install_and_configure_dashboard():
     execute("service apache2 restart", True)
 
 initialize_system()
-install_rabbitmq()
-install_database()
+# install_rabbitmq()
+# install_database()
 install_stacktach()
-install_and_configure_keystone()
-install_and_configure_glance()
-install_and_configure_nova()
-install_and_configure_quantum()
-install_and_configure_dashboard()
+# install_and_configure_keystone()
+# install_and_configure_glance()
+# install_and_configure_nova()
+# install_and_configure_quantum()
+# install_and_configure_dashboard()
 print_format(" Installation successfull! Login into horizon http://%s/horizon  Username:admin  Password:secret " % ip_address)
