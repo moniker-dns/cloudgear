@@ -464,6 +464,7 @@ def install_and_configure_quantum():
 
 def install_and_configure_dashboard():
     execute("apt-get install openstack-dashboard -y", True)
+    execute("dpkg -P openstack-dashboard-ubuntu-theme", True)
     execute("service apache2 restart", True)
 
 initialize_system()
