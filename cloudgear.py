@@ -187,8 +187,8 @@ def install_stacktach():
     delete_file(verifier_config)
     write_to_file(verifier_config, '{"tick_time": 30, "settle_time": 5, "settle_units": "minutes", "pool_size": 2, "enable_notifications": true, "rabbit": {"durable_queue": false, "host": "127.0.0.1", "port": 5672, "userid": "guest", "password": "guest", "virtual_host": "/", "exchange_name": "stacktach", "routing_keys": ["notifications.info"]}}')
     
-    execute(". /root/stacktach/etc/stacktach_config.sh && python manage.py syncdb --noinput", True)
-    execute(". /root/stacktach/etc/stacktach_config.sh && python manage.py migrate --noinput", True)
+    execute(". /root/stacktach/etc/stacktach_config.sh && python /root/stacktach/manage.py syncdb --noinput", True)
+    execute(". /root/stacktach/etc/stacktach_config.sh && python /root/stacktach/manage.py migrate --noinput", True)
    
     execute("cp stacktach-web.conf /etc/init/", True)
     execute("cp stacktach-worker.conf /etc/init/", True)
