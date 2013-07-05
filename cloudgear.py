@@ -152,13 +152,13 @@ def install_database():
 def install_stacktach():
     execute("stop stacktach-web || true", True)
     execute("stop stacktach-worker || true", True)
-    
 
-    execute("apt-get install python-pip libmysqlclient-dev python2.7-dev -y", True)
+    execute("apt-get install python-pip python-virtualenv libmysqlclient-dev python2.7-dev -y", True)
     execute("rm -rf /root/stacktach", True)
     execute("git clone https://github.com/rackerlabs/stacktach /root/stacktach", True)
-    execute("pip install --upgrade distribute", True)
-    execute("pip install -r /root/stacktach/etc/pip-requires.txt south", True)
+    execute("virtualenv /root/stacktach/venv", True)
+    execute(". /root/stacktach/venv/bin/activate && pip install --upgrade distribute", True)
+    execute(". /root/stacktach/venv/bin/activate && pip install -r /root/stacktach/etc/pip-requires.txt south", True)
     execute("mkdir -p /var/log/stacktach/")
 
     execute_db_commnads("DROP DATABASE IF EXISTS stacktach;")
@@ -169,6 +169,7 @@ def install_stacktach():
     # Write out the StackTach config file
     stacktach_config = "/root/stacktach/etc/stacktach_config.sh"
     delete_file(stacktach_config)
+    write_to_file(stacktach_config, ". /root/stacktach/venv/bin/activate\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_NAME=stacktach\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_HOST=localhost\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_USERNAME=stacktach\n")
@@ -210,6 +211,10 @@ def _create_keystone_users():
     admin_role = execute("keystone role-create --name admin|grep ' id '|awk '{print $4}'")
     execute("keystone user-role-add --user_id %s --tenant_id %s --role_id %s" % (admin_user, admin_tenant, admin_role))
 
+    user_tenant = execute("keystone tenant-create --name user --description 'User Tenant' --enabled true |grep ' id '|awk '{print $4}'")
+    user_user = execute("keystone user-create --tenant_id %s --name user --pass secret --enabled true|grep ' id '|awk '{print $4}'" % user_tenant)
+    member_role = execute("keystone role-create --name Member|grep ' id '|awk '{print $4}'")
+    execute("keystone user-role-add --user_id %s --tenant_id %s --role_id %s" % (user_user, user_tenant, member_role))
 
     service_tenant = execute("keystone tenant-create --name service --description 'Service Tenant' --enabled true |grep ' id '|awk '{print $4}'")
 
@@ -250,6 +255,13 @@ def _create_keystone_users():
     write_to_file(adminrc, "export OS_TENANT_NAME=admin\n")
     write_to_file(adminrc, "export OS_AUTH_URL=http://127.0.0.1:5000/v2.0\n")
 
+
+def _create_glance_images():
+    os.environ['SERVICE_TOKEN'] = 'ADMINTOKEN'
+    os.environ['SERVICE_ENDPOINT'] = 'http://127.0.0.1:35357/v2.0'
+    os.environ['no_proxy'] = "localhost,127.0.0.1,%s" % ip_address
+
+    execute("glance image-create --disk-format qcow2 --container-format raw --location \"https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img\" --is-public True")
 
 
 def install_and_configure_keystone():
@@ -323,7 +335,8 @@ def install_and_configure_glance():
     execute("service glance-api restart", True)
     execute("service glance-registry restart", True)
 
-
+    time.sleep(3)
+    _create_glance_images()
 
 
 def install_and_configure_nova():
@@ -378,7 +391,6 @@ def install_and_configure_nova():
     add_to_conf(nova_conf, "DEFAULT", "notification_topics", "monitor")
 
 
-
     add_to_conf(nova_compute_conf, "DEFAULT", "libvirt_type", "qemu")
     add_to_conf(nova_compute_conf, "DEFAULT", "compute_driver", "libvirt.LibvirtDriver")
     add_to_conf(nova_compute_conf, "DEFAULT", "libvirt_vif_type", "ethernet")
@@ -418,6 +430,8 @@ def install_and_configure_quantum():
     add_to_conf(quantum_conf, "DEFAULT", "rabbit_port", "5672")
     add_to_conf(quantum_conf, "DEFAULT", "allow_overlapping_ips", "False")
     add_to_conf(quantum_conf, "DEFAULT", "root_helper", "sudo quantum-rootwrap /etc/quantum/rootwrap.conf")
+    add_to_conf(quantum_conf, "DEFAULT", "notification_driver", "quantum.openstack.common.notifier.rpc_notifier")
+    add_to_conf(quantum_conf, "DEFAULT", "notification_topics", "monitor")
 
     add_to_conf(quantum_paste_conf, "filter:authtoken", "auth_host", "127.0.0.1")
     add_to_conf(quantum_paste_conf, "filter:authtoken", "auth_port", "35357")
