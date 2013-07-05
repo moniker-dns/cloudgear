@@ -257,11 +257,9 @@ def _create_keystone_users():
 
 
 def _create_glance_images():
-    os.environ['SERVICE_TOKEN'] = 'ADMINTOKEN'
-    os.environ['SERVICE_ENDPOINT'] = 'http://127.0.0.1:35357/v2.0'
     os.environ['no_proxy'] = "localhost,127.0.0.1,%s" % ip_address
 
-    execute("glance image-create --disk-format qcow2 --container-format raw --location \"https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img\" --is-public True")
+    execute(". /root/adminrc && glance image-create --disk-format qcow2 --container-format raw --location \"https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img\" --is-public True")
 
 
 def install_and_configure_keystone():
