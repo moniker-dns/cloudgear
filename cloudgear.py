@@ -259,7 +259,7 @@ def _create_keystone_users():
 def _create_glance_images():
     os.environ['no_proxy'] = "localhost,127.0.0.1,%s" % ip_address
 
-    execute(". /root/adminrc && glance image-create --disk-format qcow2 --container-format bare --location \"https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img\" --is-public True")
+    execute(". /root/adminrc && glance image-create --name cirros --disk-format qcow2 --container-format bare --location \"https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img\" --is-public True")
 
 
 def install_and_configure_keystone():
@@ -394,7 +394,8 @@ def install_and_configure_nova():
     add_to_conf(nova_compute_conf, "DEFAULT", "libvirt_vif_type", "ethernet")
     add_to_conf(nova_compute_conf, "DEFAULT", "libvirt_vif_driver", "nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver")
 
-    execute("nova-manage db sync")
+    execute("nova-manage db sync", True)
+    execute("nova-manage flavor create micro 64 1 1", True)
 
     execute("service libvirt-bin restart", True)
 
