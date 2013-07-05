@@ -150,11 +150,12 @@ def install_database():
 
 
 def install_stacktach():
-    execute("apt-get install python-pip python-virtualenv libmysqlclient-dev python2.7-dev -y", True)
+    execute("apt-get install python-pip libmysqlclient-dev python2.7-dev -y", True)
+    execute("rm -rf /root/stacktach", True)
     execute("git clone https://github.com/rackerlabs/stacktach /root/stacktach", True)
-    execute("virtualenv /root/stacktach/venv", True)
-    execute(". /root/stacktach/venv && pip install --upgrade distribute", True)
-    execute(". /root/stacktach/venv && pip install -r /root/stacktach/etc/pip-requires.txt", True)
+    execute("pip install --upgrade distribute", True)
+    execute("pip install -r /root/stacktach/etc/pip-requires.txt south", True)
+    execute("mkdir /var/log/stacktach/")
 
     execute_db_commnads("DROP DATABASE IF EXISTS stacktach;")
     execute_db_commnads("CREATE DATABASE stacktach;")
@@ -170,8 +171,8 @@ def install_stacktach():
     write_to_file(stacktach_config, "export STACKTACH_DB_PASSWORD=stacktach\n")
     write_to_file(stacktach_config, "export STACKTACH_DB_PORT=3306\n")
     write_to_file(stacktach_config, "export STACKTACH_INSTALL_DIR=/root/stacktach/\n")
-    write_to_file(stacktach_config, "export STACKTACH_DEPLOYMENTS_FILE=/root/stacktach/stacktach_worker_config.json\n")
-    write_to_file(stacktach_config, "export STACKTACH_VERIFIER_CONFIG=/root/stacktach/stacktach_verifier_config.json\n")
+    write_to_file(stacktach_config, "export STACKTACH_DEPLOYMENTS_FILE=/root/stacktach/etc/stacktach_worker_config.json\n")
+    write_to_file(stacktach_config, "export STACKTACH_VERIFIER_CONFIG=/root/stacktach/etc/stacktach_verifier_config.json\n")
     write_to_file(stacktach_config, "export DJANGO_SETTINGS_MODULE=settings\n")
 
     worker_config = "/root/stacktach/etc/stacktach_worker_config.json"
@@ -181,6 +182,15 @@ def install_stacktach():
     verifier_config = "/root/stacktach/etc/stacktach_verifier_config.json"
     delete_file(verifier_config)
     write_to_file(verifier_config, '{"tick_time": 30, "settle_time": 5, "settle_units": "minutes", "pool_size": 2, "enable_notifications": true, "rabbit": {"durable_queue": false, "host": "127.0.0.1", "port": 5672, "userid": "guest", "password": "guest", "virtual_host": "/", "exchange_name": "stacktach", "routing_keys": ["notifications.info"]}}')
+    
+    execute(". etc/stacktach_config.sh && python manage.py syncdb --noinput", True)
+    execute(". etc/stacktach_config.sh && python manage.py migrate --noinput", True)
+   
+    execute("cp stacktach-web.conf /etc/init/", True)
+    execute("cp stacktach-worker.conf /etc/init/", True)
+
+    execute("start stacktach-web", True)
+    execute("start stacktach-worker", True)
     
     time.sleep(2)
 
