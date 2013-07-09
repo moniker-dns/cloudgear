@@ -113,7 +113,7 @@ def initialize_system():
     execute("apt-get clean" , True)
     execute("apt-get autoclean -y" , True)
     execute("apt-get update -y" , True)
-    execute("apt-get install ubuntu-cloud-keyring python-setuptools python-iniparse python-psutil -y", True)
+    execute("apt-get install make ubuntu-cloud-keyring python-setuptools python-iniparse python-psutil -y", True)
     delete_file("/etc/apt/sources.list.d/grizzly.list")
     execute("echo deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/grizzly main >> /etc/apt/sources.list.d/grizzly.list")
     execute("apt-get update -y", True)
@@ -165,7 +165,7 @@ def install_stacktach():
     execute_db_commnads("CREATE DATABASE stacktach;")
     execute_db_commnads("GRANT ALL PRIVILEGES ON stacktach.* TO 'stacktach'@'%' IDENTIFIED BY 'stacktach';")
     execute_db_commnads("GRANT ALL PRIVILEGES ON stacktach.* TO 'stacktach'@'localhost' IDENTIFIED BY 'stacktach';")
-    
+
     # Write out the StackTach config file
     stacktach_config = "/root/stacktach/etc/stacktach_config.sh"
     delete_file(stacktach_config)
@@ -183,20 +183,20 @@ def install_stacktach():
     worker_config = "/root/stacktach/etc/stacktach_worker_config.json"
     delete_file(worker_config)
     write_to_file(worker_config, '{"deployments": [{"name": "virtualbox", "durable_queue": false, "rabbit_host": "127.0.0.1", "rabbit_port": 5672, "rabbit_userid": "guest", "rabbit_password": "guest", "rabbit_virtual_host": "/"}]}')
-    
+
     verifier_config = "/root/stacktach/etc/stacktach_verifier_config.json"
     delete_file(verifier_config)
     write_to_file(verifier_config, '{"tick_time": 30, "settle_time": 5, "settle_units": "minutes", "pool_size": 2, "enable_notifications": true, "rabbit": {"durable_queue": false, "host": "127.0.0.1", "port": 5672, "userid": "guest", "password": "guest", "virtual_host": "/", "exchange_name": "stacktach", "routing_keys": ["notifications.info"]}}')
-    
+
     execute(". /root/stacktach/etc/stacktach_config.sh && python /root/stacktach/manage.py syncdb --noinput", True)
     execute(". /root/stacktach/etc/stacktach_config.sh && python /root/stacktach/manage.py migrate --noinput", True)
-   
+
     execute("cp stacktach-web.conf /etc/init/", True)
     execute("cp stacktach-worker.conf /etc/init/", True)
 
     execute("start stacktach-web", True)
     execute("start stacktach-worker", True)
-    
+
     time.sleep(2)
 
 
@@ -459,7 +459,14 @@ def install_and_configure_quantum():
     execute("service quantum-plugin-linuxbridge-agent restart", True)
     execute("service quantum-dhcp-agent restart", True)
 
+    # wait for the services to start before attempting create networks
+    time.sleep(3)
+    _create_quantum_networks()
 
+def _create_quantum_networks():
+    admin_id = execute("keystone tenant-get admin | grep id | awk '{ print $4}'")
+    execute(". /root/adminrc && quantum net-create --tenant-id=%s network-1" % admin_id)
+    execute(". /root/adminrc && quantum subnet-create --tenant-id=%s --name=subnet-1 network-1 10.1.0.0/24 " % admin_id)
 
 def install_and_configure_dashboard():
     execute("apt-get install openstack-dashboard -y", True)
